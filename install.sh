@@ -67,9 +67,13 @@ case ":${PATH}:" in
   *) echo "NOTE: ${BIN_DIR} is not on your PATH. Add it in ~/.zshrc." ;;
 esac
 
-if ! command -v claude >/dev/null 2>&1; then
-  echo "NOTE: the 'claude' CLI was not found. ccline needs it:"
-  echo "      https://claude.com/claude-code"
+if ! command -v claude >/dev/null 2>&1 \
+  && ! command -v codex >/dev/null 2>&1 \
+  && ! command -v pi >/dev/null 2>&1; then
+  echo "NOTE: no supported LLM CLI was found. ccline needs one:"
+  echo "      Claude Code: https://claude.com/claude-code"
+  echo "      Codex:       https://github.com/openai/codex"
+  echo "      Pi:          https://github.com/earendil-works/pi"
 fi
 
 echo

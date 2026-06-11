@@ -104,8 +104,8 @@ check "no args => rc 2" "2" "$?"
 ( PATH="/nonexistent-only"; ccline_main hello there >/dev/null 2>&1 )
 check "no LLM CLI => rc 127" "127" "$?"
 
-# --- backend detection: claude precedence, codex fallback, override, none ---
-BOTH="$(mktemp -d)"; ONLYCODEX="$(mktemp -d)"
+# --- backend detection: claude precedence, codex fallback, overrides, none ---
+BOTH="$(mktemp -d)"; ONLYCODEX="$(mktemp -d)"; ONLYPI="$(mktemp -d)"
 printf '#!/usr/bin/env bash\necho CLAUDE_REPLY\n' > "${BOTH}/claude"
 cat > "${BOTH}/codex" <<'CX'
 #!/usr/bin/env bash
@@ -113,18 +113,55 @@ out=""; while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift 2 ;; *) shift ;;
 cat >/dev/null   # consume the prompt on stdin
 [ -n "$out" ] && printf 'CODEX_REPLY\n' > "$out"
 CX
+cat > "${BOTH}/pi" <<'PI'
+#!/usr/bin/env bash
+prompt=""; sys=""; mode=""; thinking=""
+offline=0
+print=0; no_session=0; no_tools=0; no_extensions=0; no_skills=0
+no_prompt_templates=0; no_themes=0; no_context_files=0; no_approve=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --print | -p) print=1; shift ;;
+    --mode) mode="$2"; shift 2 ;;
+    --offline) offline=1; shift ;;
+    --system-prompt) sys="$2"; shift 2 ;;
+    --thinking) thinking="$2"; shift 2 ;;
+    --model) shift 2 ;;
+    --no-session) no_session=1; shift ;;
+    --no-tools | -nt) no_tools=1; shift ;;
+    --no-extensions | -ne) no_extensions=1; shift ;;
+    --no-skills | -ns) no_skills=1; shift ;;
+    --no-prompt-templates | -np) no_prompt_templates=1; shift ;;
+    --no-themes) no_themes=1; shift ;;
+    --no-context-files | -nc) no_context_files=1; shift ;;
+    --no-approve | -na) no_approve=1; shift ;;
+    *) prompt="$1"; shift ;;
+  esac
+done
+case "$prompt:$sys:$mode:$thinking:$offline:$print:$no_session:$no_tools:$no_extensions:$no_skills:$no_prompt_templates:$no_themes:$no_context_files:$no_approve" in
+  *"ask pi something"*"command-line assistant"*:text:off:1:1:1:1:1:1:1:1:1:1) printf 'PI_REPLY\n' ;;
+  *) exit 45 ;;
+esac
+PI
 cp "${BOTH}/codex" "${ONLYCODEX}/codex"
-chmod +x "${BOTH}/claude" "${BOTH}/codex" "${ONLYCODEX}/codex"
+cp "${BOTH}/pi" "${ONLYPI}/pi"
+chmod +x "${BOTH}/claude" "${BOTH}/codex" "${BOTH}/pi" "${ONLYCODEX}/codex" "${ONLYPI}/pi"
 
 check "backend: claude precedence"  "claude" "$(PATH="${BOTH}:/usr/bin:/bin" ccline_backend)"
 check "backend: codex fallback"     "codex"  "$(PATH="${ONLYCODEX}:/usr/bin:/bin" ccline_backend)"
+check "backend: pi fallback"        "pi"     "$(PATH="${ONLYPI}:/usr/bin:/bin" ccline_backend)"
 check "backend: override to codex"  "codex"  "$(PATH="${BOTH}:/usr/bin:/bin" CCLINE_BACKEND=codex ccline_backend)"
+check "backend: override to pi"     "pi"     "$(PATH="${BOTH}:/usr/bin:/bin" CCLINE_BACKEND=pi ccline_backend)"
 check "backend: none found"         ""       "$(PATH=/nonexistent ccline_backend)"
 
 # end-to-end through the codex fallback (no claude on PATH)
 out="$(PATH="${ONLYCODEX}:/usr/bin:/bin" ccline_main ask codex something < /dev/null)"
 check "codex e2e: answer used" "CODEX_REPLY" "$(printf '%s' "$out" | grep -o CODEX_REPLY | head -1)"
-rm -rf "$BOTH" "$ONLYCODEX"
+
+# end-to-end through the pi fallback (no claude/codex on PATH)
+out="$(PATH="${ONLYPI}:/usr/bin:/bin" ccline_main ask pi something < /dev/null)"
+check "pi e2e: answer used" "PI_REPLY" "$(printf '%s' "$out" | grep -o PI_REPLY | head -1)"
+rm -rf "$BOTH" "$ONLYCODEX" "$ONLYPI"
 
 rm -rf "$STUB"
 

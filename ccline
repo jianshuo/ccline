@@ -40,8 +40,8 @@ plainly.
 EOF
 }
 
-# Decide which LLM CLI to use. claude takes precedence; codex is the fallback.
-# CCLINE_BACKEND=claude|codex forces a choice (if that CLI is installed).
+# Decide which LLM CLI to use. claude takes precedence, codex is next, and pi is
+# the final fallback. CCLINE_BACKEND=claude|codex|pi forces a choice.
 ccline_backend() {
   if [ -n "${CCLINE_BACKEND:-}" ] && command -v "$CCLINE_BACKEND" >/dev/null 2>&1; then
     echo "$CCLINE_BACKEND"
@@ -51,7 +51,39 @@ ccline_backend() {
     echo claude
   elif command -v codex >/dev/null 2>&1; then
     echo codex
+  elif command -v pi >/dev/null 2>&1; then
+    echo pi
   fi
+}
+
+# Ask via the pi CLI. Use print mode, no saved session, and disable the built-in
+# tool/resource loaders that are not needed for quick shell questions.
+ccline_ask_pi() {
+  local prompt="$1" sys="$2"
+  if ! command -v pi >/dev/null 2>&1; then
+    echo "ccline: pi backend selected but no 'pi' CLI found" >&2
+    return 127
+  fi
+
+  local model_args=()
+  [ -n "${CCLINE_MODEL:-}" ] && model_args=(--model "$CCLINE_MODEL")
+
+  pi \
+    --print \
+    --mode text \
+    --offline \
+    --no-session \
+    --no-tools \
+    --no-extensions \
+    --no-skills \
+    --no-prompt-templates \
+    --no-themes \
+    --no-context-files \
+    --no-approve \
+    --thinking off \
+    --system-prompt "$sys" \
+    ${model_args[@]+"${model_args[@]}"} \
+    "$prompt"
 }
 
 # Ask via the claude CLI. Clean, isolated call: no default agent prompt, tools,
@@ -226,9 +258,10 @@ ccline_main() {
   local backend
   backend="$(ccline_backend)"
   if [ -z "$backend" ]; then
-    echo "ccline: no LLM CLI found — install 'claude' (preferred) or 'codex':" >&2
+    echo "ccline: no LLM CLI found — install 'claude' (preferred), 'codex', or 'pi':" >&2
     echo "  Claude Code: https://claude.com/claude-code" >&2
     echo "  Codex:       https://github.com/openai/codex" >&2
+    echo "  Pi:          https://github.com/earendil-works/pi" >&2
     return 127
   fi
 

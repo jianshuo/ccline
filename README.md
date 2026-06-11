@@ -51,8 +51,9 @@ isn't a real command, zsh hands the whole line to ccline:
   falls back to a typed prompt (`1-N`, `a`=all, Enter=none).
 
 It uses the [`claude`](https://claude.com/claude-code) CLI if installed
-(preferred), otherwise the [`codex`](https://github.com/openai/codex) CLI —
-auto-detected. Force one with `CCLINE_BACKEND=claude` or `CCLINE_BACKEND=codex`.
+(preferred), otherwise the [`codex`](https://github.com/openai/codex) CLI, then
+Pi's [`pi`](https://github.com/earendil-works/pi) CLI. Force one with
+`CCLINE_BACKEND=claude`, `CCLINE_BACKEND=codex`, or `CCLINE_BACKEND=pi`.
 
 Markdown rendering uses [`glow`](https://github.com/charmbracelet/glow) if it's
 installed; otherwise a built-in `perl` renderer (no extra dependency).
@@ -62,7 +63,8 @@ installed; otherwise a built-in `perl` renderer (no extra dependency).
 - zsh (the macOS default shell)
 - One of these on your `PATH`, authenticated:
   - [`claude`](https://claude.com/claude-code) (preferred), or
-  - [`codex`](https://github.com/openai/codex) (fallback)
+  - [`codex`](https://github.com/openai/codex) (fallback), or
+  - [`pi`](https://github.com/earendil-works/pi) (fallback)
 
 ## Install
 
@@ -97,8 +99,8 @@ new terminal (or `source ~/.zshrc`).
 
 ## Configuration
 
-- `CCLINE_BACKEND` — force the LLM CLI: `claude` or `codex`. Default is
-  auto-detect (claude preferred, codex fallback).
+- `CCLINE_BACKEND` — force the LLM CLI: `claude`, `codex`, or `pi`. Default is
+  auto-detect (`claude`, then `codex`, then `pi`).
 - `CCLINE_MODEL` — override the model. The claude backend defaults to
   `claude-sonnet-4-6` (fastest end-to-end for these short prompts); set this to
   use another, e.g. `export CCLINE_MODEL=claude-opus-4-8`. Passed as `--model`
